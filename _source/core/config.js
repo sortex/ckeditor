@@ -86,6 +86,16 @@ CKEDITOR.config =
 	contentsLangDirection : 'ltr',
 
 	/**
+	 * Language code of  the writting language which is used to author the editor
+	 * contents.
+	 * @default Same value with editor's UI language.
+	 * @type String
+	 * @example
+	 * config.contentsLanguage = 'fr';
+	 */
+	contentsLanguage : '',
+
+	/**
 	 * The user interface language localization to use. If empty, the editor
 	 * automatically localize the editor to the user language, if supported,
 	 * otherwise the {@link CKEDITOR.config.defaultLanguage} language is used.
@@ -229,7 +239,7 @@ CKEDITOR.config =
 	 * @type String
 	 * @example
 	 */
-	plugins : 'about,a11yhelp,basicstyles,blockquote,button,clipboard,colorbutton,colordialog,contextmenu,div,elementspath,enterkey,entities,filebrowser,find,flash,font,format,forms,horizontalrule,htmldataprocessor,image,indent,justify,keystrokes,link,list,maximize,newpage,pagebreak,pastefromword,pastetext,popup,preview,print,removeformat,resize,save,scayt,smiley,showblocks,showborders,sourcearea,stylescombo,table,tabletools,specialchar,tab,templates,toolbar,undo,wysiwygarea,wsc',
+	plugins : 'about,a11yhelp,basicstyles,blockquote,button,clipboard,colorbutton,colordialog,contextmenu,div,elementspath,enterkey,entities,filebrowser,find,flash,font,format,forms,horizontalrule,htmldataprocessor,image,indent,justify,keystrokes,link,list,liststyle,maximize,newpage,pagebreak,pastefromword,pastetext,popup,preview,print,removeformat,resize,save,scayt,smiley,showblocks,showborders,sourcearea,stylescombo,table,tabletools,specialchar,tab,templates,toolbar,undo,wysiwygarea,wsc',
 
 	/**
 	 * List of additional plugins to be loaded. This is a tool setting which

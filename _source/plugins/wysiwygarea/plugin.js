@@ -170,6 +170,13 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 		}
 	}
 
+	function isBlankParagraph( block )
+	{
+		return block.getOuterHtml().match( emptyParagraphRegexp );
+	}
+
+	isNotWhitespace = CKEDITOR.dom.walker.whitespaces( true );
+
 	/**
 	 *  Auto-fixing block-less content by wrapping paragraph (#3190), prevent
 	 *  non-exitable-block by padding extra br.(#3189)
@@ -191,6 +198,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 			 && blockLimit.getName() == 'body'
 			 && !path.block )
 		{
+			editor.fire( 'updateSnapshot' );
 			restoreDirty( editor );
 			CKEDITOR.env.ie && restoreSelection( selection );
 
@@ -204,19 +212,21 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 				first && isNbsp( first ) && first.remove();
 			}
 
-			// If the fixed block is blank and already followed by a exitable
-			// block, we should revert the fix. (#3684)
-			if ( fixedBlock.getOuterHtml().match( emptyParagraphRegexp ) )
+			// If the fixed block is actually blank and is already followed by an exitable blank
+			// block, we should revert the fix and move into the existed one. (#3684)
+			if ( isBlankParagraph( fixedBlock ) )
 			{
 				var previousElement = fixedBlock.getPrevious( isNotWhitespace ),
 					nextElement = fixedBlock.getNext( isNotWhitespace );
 
 				if ( previousElement && previousElement.getName
 					 && !( previousElement.getName() in nonExitableElementNames )
+					 && isBlankParagraph( previousElement )
 					 && range.moveToElementEditStart( previousElement )
 					 || nextElement && nextElement.getName
-					   && !( nextElement.getName() in nonExitableElementNames )
-					   && range.moveToElementEditStart( nextElement ) )
+						&& !( nextElement.getName() in nonExitableElementNames )
+						&& isBlankParagraph( nextElement )
+						&& range.moveToElementEditStart( nextElement ) )
 				{
 					fixedBlock.remove();
 				}
@@ -245,6 +255,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 		if ( walker.previous() )
 		{
+			editor.fire( 'updateSnapshot' );
 			restoreDirty( editor );
 			CKEDITOR.env.ie && restoreSelection( selection );
 
@@ -270,6 +281,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 			var frameLabel = editor.lang.editorTitle.replace( '%1', editor.name );
 
+			var contentDomReadyHandler;
 			editor.on( 'editingBlockReady', function()
 				{
 					var mainElement,
@@ -289,13 +301,6 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 						if ( iframe )
 							iframe.remove();
 
-						frameLoaded = 0;
-
-						var setDataFn = !CKEDITOR.env.gecko && CKEDITOR.tools.addFunction( function( doc )
-							{
-								CKEDITOR.tools.removeFunction( setDataFn );
-								doc.write( data );
-							});
 
 						var srcScript =
 							'document.open();' +
@@ -304,29 +309,30 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 							// call document.open().
 							( isCustomDomain ? ( 'document.domain="' + document.domain + '";' ) : '' ) +
 
-							( ( 'parent.CKEDITOR.tools.callFunction(' + setDataFn + ',document);' ) ) +
-
 							'document.close();';
 
 						iframe = CKEDITOR.dom.element.createFromHtml( '<iframe' +
   							' style="width:100%;height:100%"' +
   							' frameBorder="0"' +
   							' title="' + frameLabel + '"' +
-							// With FF, the 'src' attribute should be left empty to
+							// With IE, the custom domain has to be taken care at first,
+							// for other browers, the 'src' attribute should be left empty to
 							// trigger iframe's 'load' event.
-  							' src="' + ( CKEDITOR.env.gecko ? '' : 'javascript:void(function(){' + encodeURIComponent( srcScript ) + '}())' ) + '"' +
+  							' src="' + ( CKEDITOR.env.ie ? 'javascript:void(function(){' + encodeURIComponent( srcScript ) + '}())' : '' ) + '"' +
 							' tabIndex="' + editor.tabIndex + '"' +
   							' allowTransparency="true"' +
   							'></iframe>' );
 
 						// With FF, it's better to load the data on iframe.load. (#3894,#4058)
-						CKEDITOR.env.gecko && iframe.on( 'load', function( ev )
+						iframe.on( 'load', function( ev )
 							{
+								frameLoaded = 1;
 								ev.removeListener();
 
 								var doc = iframe.getFrameDocument().$;
 
-								doc.open();
+								// Don't leave any history log in IE. (#5657)
+								doc.open( "text/html","replace" );
 								doc.write( data );
 								doc.close();
 							});
@@ -336,18 +342,19 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 					// The script that launches the bootstrap logic on 'domReady', so the document
 					// is fully editable even before the editing iframe is fully loaded (#4455).
+					contentDomReadyHandler = CKEDITOR.tools.addFunction( contentDomReady );
 					var activationScript =
 						'<script id="cke_actscrpt" type="text/javascript" cke_temp="1">' +
 							( isCustomDomain ? ( 'document.domain="' + document.domain + '";' ) : '' ) +
-							'parent.CKEDITOR._["contentDomReady' + editor.name + '"]( window );' +
+							'window.parent.CKEDITOR.tools.callFunction( ' + contentDomReadyHandler + ', window );' +
 						'</script>';
 
 					// Editing area bootstrap code.
-					var contentDomReady = function( domWindow )
+					function contentDomReady( domWindow )
 					{
-						if ( frameLoaded )
+						if ( !frameLoaded )
 							return;
-						frameLoaded = 1;
+						frameLoaded = 0;
 
 						editor.fire( 'ariaWidget', iframe );
 
@@ -357,8 +364,6 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 						// Remove this script from the DOM.
 						var script = domDocument.getElementById( "cke_actscrpt" );
 						script.parentNode.removeChild( script );
-
-						delete CKEDITOR._[ 'contentDomReady' + editor.name ];
 
 						body.spellcheck = !editor.config.disableNativeSpellChecker;
 
@@ -374,7 +379,32 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 							body.removeAttribute( 'disabled' );
 						}
 						else
+						{
+							// Gecko need a key event to 'wake up' the editing
+							// ability when document is empty.(#3864)
+							if ( CKEDITOR.env.gecko && !body.childNodes.length )
+							{
+								setTimeout( function()
+								{
+									restoreDirty( editor );
+
+									// Simulating keyboard character input by dispatching a keydown of white-space text.
+									var keyEventSimulate = domDocument.$.createEvent( "KeyEvents" );
+									keyEventSimulate.initKeyEvent( 'keypress', true, true, domWindow.$, false,
+										false, false, false, 0, 32 );
+									domDocument.$.dispatchEvent( keyEventSimulate );
+
+									// Restore the original document status by placing the cursor before a bogus br created (#5021).
+									domDocument.createElement( 'br', { attributes: { '_moz_editor_bogus_node' : 'TRUE', '_moz_dirty' : "" } } )
+										.replace( domDocument.getBody().getFirst() );
+									var nativeRange = new CKEDITOR.dom.range( domDocument );
+									nativeRange.setStartAt( new CKEDITOR.dom.element( body ) , CKEDITOR.POSITION_AFTER_START );
+									nativeRange.select();
+								}, 0 );
+							}
+
 							domDocument.designMode = 'on';
+						}
 
 						// IE, Opera and Safari may not support it and throw
 						// errors.
@@ -439,33 +469,6 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 						focusTarget.on( 'focus', function()
 							{
-								// Gecko need a key event to 'wake up' the editing
-								// ability when document is empty.(#3864)
-								if ( CKEDITOR.env.gecko )
-								{
-									var first = body;
-									while ( first.firstChild )
-										first = first.firstChild;
-
-									if ( !first.nextSibling
-										&& ( 'BR' == first.tagName )
-										&& first.hasAttribute( '_moz_editor_bogus_node' ) )
-									{
-										restoreDirty( editor );
-										var keyEventSimulate = domDocument.$.createEvent( "KeyEvents" );
-										keyEventSimulate.initKeyEvent( 'keypress', true, true, domWindow.$, false,
-											false, false, false, 0, 32 );
-										domDocument.$.dispatchEvent( keyEventSimulate );
-										var bogusText = domDocument.getBody().getFirst() ;
-										// Compensate the line maintaining <br> if enterMode is not block.
-										if ( editor.config.enterMode == CKEDITOR.ENTER_BR )
-											domDocument.createElement( 'br', { attributes: { '_moz_dirty' : "" } } )
-												.replace( bogusText );
-										else
-											bogusText.remove();
-									}
-								}
-
 								editor.focusManager.focus();
 							});
 
@@ -573,7 +576,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 								}
 							},
 							0 );
-					};
+					}
 
 					editor.addMode( 'wysiwyg',
 						{
@@ -643,6 +646,8 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 									// Check if the <head> tag is available.
 									if ( !(/<head[\s|>]/).test( data ) )
 										data = data.replace( /<html[^>]*>/, '$&<head><title></title></head>' ) ;
+									else if ( !(/<title[\s|>]/).test( data ) )
+										data = data.replace( /<head[^>]*>/, '$&<title></title>' ) ;
 
 									// The base must be the first tag in the HEAD, e.g. to get relative
 									// links on styles.
@@ -662,7 +667,8 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 								{
 									data =
 										config.docType +
-										'<html dir="' + config.contentsLangDirection + '">' +
+										'<html dir="' + config.contentsLangDirection + '"' +
+											' lang="' + ( config.contentsLanguage || editor.langCode ) + '">' +
 										'<title>' + frameLabel + '</title>' +
 										'<head>' +
 											baseTag +
@@ -677,7 +683,6 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 								data += activationScript;
 
-								CKEDITOR._[ 'contentDomReady' + editor.name ] = contentDomReady;
 
 								// The iframe is recreated on each call of setData, so we need to clear DOM objects
 								this.onDispose();
@@ -787,6 +792,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 				} );
 				editor.on( 'destroy', function()
 				{
+					CKEDITOR.tools.removeFunction( contentDomReadyHandler );
 					ieFocusGrabber.clearCustomData();
 				} );
 			}
@@ -804,24 +810,21 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 				window.addEventListener( 'load', arguments.callee, false );
 			else
 			{
-				body.setAttribute( 'onpageshow', body.getAttribute( 'onpageshow' )
-						+ ';event.persisted && CKEDITOR.tools.callFunction(' +
-						CKEDITOR.tools.addFunction( function()
-						{
-							var allInstances = CKEDITOR.instances,
-								editor,
-								doc;
-							for ( var i in allInstances )
-							{
-								editor = allInstances[ i ];
-								doc = editor.document;
-								if ( doc )
-								{
-									doc.$.designMode = 'off';
-									doc.$.designMode = 'on';
-								}
-							}
-						} ) + ')' );
+				var currentHandler = body.getAttribute( 'onpageshow' );
+				body.setAttribute( 'onpageshow', ( currentHandler ? currentHandler + ';' : '') +
+							'event.persisted && (function(){' +
+								'var allInstances = CKEDITOR.instances, editor, doc;' +
+								'for ( var i in allInstances )' +
+								'{' +
+								'	editor = allInstances[ i ];' +
+								'	doc = editor.document;' +
+								'	if ( doc )' +
+								'	{' +
+								'		doc.$.designMode = "off";' +
+								'		doc.$.designMode = "on";' +
+								'	}' +
+								'}' +
+						'})();' );
 			}
 		} )();
 
