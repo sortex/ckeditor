@@ -106,11 +106,7 @@ CKEDITOR.ui.richCombo = CKEDITOR.tools.createClass(
 						return;
 					}
 
-					if ( !_.committed )
-					{
-						_.list.commit();
-						_.committed = 1;
-					}
+					!_.committed && this.commit();
 
 					var value = this.getValue();
 					if ( value )
@@ -244,7 +240,7 @@ CKEDITOR.ui.richCombo = CKEDITOR.tools.createClass(
 					if ( me.className )
 						this.element.getFirst().removeClass( me.className + '_panel' );
 
-					me.setState( CKEDITOR.TRISTATE_OFF );
+					me.setState( me.modes && me.modes[ editor.mode ] ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
 
 					me._.on = 0;
 
@@ -350,6 +346,7 @@ CKEDITOR.ui.richCombo = CKEDITOR.tools.createClass(
 		commit : function()
 		{
 			this._.list.commit();
+			this._.committed = 1;
 		},
 
 		setState : function( state )

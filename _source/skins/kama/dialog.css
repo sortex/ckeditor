@@ -394,6 +394,7 @@ body .cke_dialog
 .cke_skin_kama a.cke_dialog_ui_button_ok span,
 .cke_skin_kama a.cke_dialog_ui_button_cancel span
 {
+	width:60px;
 	padding-right: 20px;
 	padding-left: 20px;
 }
@@ -508,6 +509,12 @@ body .cke_dialog
 	position: relative;
 }
 
+/* IE7 needs position static #6806 */
+.cke_skin_kama .cke_browser_ie7 .cke_dialog_footer_buttons
+{
+	position: static;
+}
+
 /* Gecko 1.8 does not support for display: inline-table */
 .cke_skin_kama .cke_browser_gecko18 .cke_dialog_footer_buttons
 {
@@ -517,7 +524,6 @@ body .cke_dialog
 .cke_skin_kama .cke_dialog_footer_buttons span.cke_dialog_ui_button
 {
 	margin: 7px 0;
-	width: 60px;
 	text-align: center;
 }
 

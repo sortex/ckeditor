@@ -60,6 +60,8 @@ CKEDITOR.plugins.add( 'floatpanel',
 				children : [],
 				dir : editor.lang.dir
 			};
+
+			editor.on( 'mode', function(){ this.hide(); }, this );
 		},
 
 		proto :
@@ -123,10 +125,11 @@ CKEDITOR.plugins.add( 'floatpanel',
 
 				element.setStyles(
 					{
-						top : 0,
+						top : top + 'px',
 						left: 0,
 						display	: ''
 					});
+
 				// Don't use display or visibility style because we need to
 				// calculate the rendering layout later and focus the element.
 				element.setOpacity( 0 );

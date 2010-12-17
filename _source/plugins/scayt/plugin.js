@@ -244,7 +244,8 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 					{
 						span : function( element )
 						{
-							if ( element.attributes.scayt_word && element.attributes.scaytid )
+							if ( element.attributes[ 'data-scayt_word' ]
+									&& element.attributes[ 'data-scaytid' ] )
 							{
 								delete element.name;	// Write children, but don't write this node.
 								return element;
@@ -382,7 +383,7 @@ CKEDITOR.plugins.scayt =
 			var protocol = document.location.protocol;
 			// Default to 'http' for unknown.
 			protocol = protocol.search( /https?:/) != -1? protocol : 'http:';
-			var baseUrl  = 'svc.spellchecker.net/scayt25/loader__base.js';
+			var baseUrl  = 'svc.spellchecker.net/scayt26/loader__base.js';
 
 			var scaytUrl  =  editor.config.scayt_srcUrl || ( protocol + '//' + baseUrl );
 			var scaytConfigBaseUrl =  plugin.parseUrl( scaytUrl ).path +  '/';
@@ -594,6 +595,7 @@ CKEDITOR.plugins.scayt =
 						label : lang.title,
 						title : CKEDITOR.env.opera ? lang.opera_title : lang.title,
 						className : 'cke_button_scayt',
+						modes : { wysiwyg : 1 },
 						onRender: function()
 						{
 							command.on( 'state', function()
@@ -788,7 +790,7 @@ CKEDITOR.plugins.scayt =
 			var elementsPathFilters,
 					scaytFilter = function( element )
 					{
-						if ( element.hasAttribute( 'scaytid' ) )
+						if ( element.hasAttribute( 'data-scaytid' ) )
 							return false;
 					};
 

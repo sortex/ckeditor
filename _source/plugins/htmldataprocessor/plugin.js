@@ -38,8 +38,17 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 		}
 	}
 
-	function blockNeedsExtension( block )
+	function blockNeedsExtension( block, fromSource )
 	{
+        // 1. For IE version >=8,  empty blocks are displayed correctly themself in wysiwiyg;
+        // 2. For the rest, at least table cell and list item need no filler space.
+        // (#6248)
+        if ( fromSource && CKEDITOR.env.ie &&
+                ( document.documentMode > 7
+                || block.name in CKEDITOR.dtd.tr
+                || block.name in CKEDITOR.dtd.$listItem ) )
+            return false;
+
 		var lastChild = lastNoneSpaceChild( block );
 
 		return !lastChild
@@ -53,7 +62,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 	{
 		trimFillers( block, true );
 
-		if ( blockNeedsExtension( block ) )
+		if ( blockNeedsExtension( block, true ) )
 		{
 			if ( CKEDITOR.env.ie )
 				block.add( new CKEDITOR.htmlParser.text( '\xa0' ) );
@@ -263,7 +272,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 		defaultHtmlFilterRules.elements[ i ] = unprotectReadyOnly;
 	}
 
-	var protectAttributeRegex = /<((?:a|area|img|input)[\s\S]*?\s)((href|src|name)\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|(?:[^ "'>]+)))([^>]*)>/gi,
+	var protectAttributeRegex = /<((?:a|area|img|input)\b[\s\S]*?\s)((href|src|name)\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|(?:[^ "'>]+)))([^>]*)>/gi,
 		findSavedSrcRegex = /\s_cke_saved_src\s*=/;
 
 	var protectElementsRegex = /(?:<style(?=[ >])[^>]*>[\s\S]*<\/style>)|(?:<(:?link|meta|base)[^>]*>)/gi,
@@ -492,9 +501,9 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 /**
  * Whether to force using "&" instead of "&amp;amp;" in elements attributes
- * values. It's not recommended to change this setting for compliance with the
- * W3C XHTML 1.0 standards
- * (<a href="http://www.w3.org/TR/xhtml1/#C_12">C.12, XHTML 1.0</a>).
+ * values, it's not recommended to change this setting for compliance with the
+ * W3C XHTML 1.0 standards (<a href="http://www.w3.org/TR/xhtml1/#C_12">C.12, XHTML 1.0</a>).
+ * @name CKEDITOR.config.forceSimpleAmpersand
  * @type Boolean
  * @default false
  * @example

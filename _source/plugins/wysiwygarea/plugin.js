@@ -18,6 +18,13 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 	var notWhitespaceEval = CKEDITOR.dom.walker.whitespaces( true );
 
+	// Elements that could have empty new line around, including table, pre-formatted block, hr, page-break. (#6554)
+	function nonExitable( element )
+	{
+		return ( element.getName() in nonExitableElementNames )
+				|| element.isBlockBoundary() && CKEDITOR.dtd.$empty[ element.getName() ];
+	}
+
 	function checkReadOnly( selection )
 	{
 		if ( selection.getType() == CKEDITOR.SELECTION_ELEMENT )
@@ -317,7 +324,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 				var element = fixedBlock.getNext( isNotWhitespace );
 				if ( element &&
 					 element.type == CKEDITOR.NODE_ELEMENT &&
-					 !nonExitableElementNames[ element.getName() ] )
+					 !nonExitable( element ) )
 				{
 					range.moveToElementEditStart( element );
 					fixedBlock.remove();
@@ -327,7 +334,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 					element = fixedBlock.getPrevious( isNotWhitespace );
 					if ( element &&
 						 element.type == CKEDITOR.NODE_ELEMENT &&
-						 !nonExitableElementNames[ element.getName() ] )
+						 !nonExitable( element ) )
 					{
 						range.moveToElementEditEnd( element );
 						fixedBlock.remove();
@@ -1026,7 +1033,7 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 				{
 					focusGrabber = editor.container.append( CKEDITOR.dom.element.createFromHtml(
 						// Use 'span' instead of anything else to fly under the screen-reader radar. (#5049)
-						'<span tabindex="-1" style="position:absolute; left:-10000" role="presentation"></span>' ) );
+						'<span tabindex="-1" style="position:absolute;" role="presentation"></span>' ) );
 
 					focusGrabber.on( 'focus', function()
 						{
