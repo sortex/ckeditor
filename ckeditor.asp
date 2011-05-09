@@ -91,9 +91,9 @@ Class CKEditor
 
 
 	Private Sub Class_Initialize()
-		version = "3.5.4"
-		timeStamp = "B49D5BN"
-		mTimeStamp = "B49D5BN"
+		version = "3.6"
+		timeStamp = "B49E5BQ"
+		mTimeStamp = "B49E5BQ"
 
 		Set oInstanceConfig = CreateObject("Scripting.Dictionary")
 		Set oAllInstancesConfig = CreateObject("Scripting.Dictionary")
